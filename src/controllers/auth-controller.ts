@@ -2,11 +2,23 @@ import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-import User from "models/User";
+import User from "../models/User";
+import addUserSchema from "../schemas/add-user-schema";
+import { sendVerificationLink } from "mail/edge";
 
 export const createUser = async (req: Request, res: Response) => {
-  const { name, email, password } = req.body;
+  const { body } = req;
   try {
+    const validator = await addUserSchema(body);
+
+    const { value, error } = validator.validate(body);
+
+    if (error) {
+      return res.status(401).json(error.details);
+    }
+
+    const { name, email, password } = value;
+
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -17,6 +29,11 @@ export const createUser = async (req: Request, res: Response) => {
     });
 
     newUser.save();
+    await sendVerificationLink(
+      email,
+      name,
+      "https://auth-production-9ab4.up.railway.app/verify"
+    );
     return res.status(201).json(newUser);
   } catch (error) {
     return res.status(401).json(error);
@@ -53,4 +70,10 @@ export const login = async (req: Request, res: Response) => {
   } catch (error) {
     return res.status(401).json(error);
   }
+};
+
+export const getAllUser = async (_: Request, res: Response) => {
+  const data = await User.find();
+
+  return res.status(200).json(data);
 };

@@ -18,6 +18,10 @@ const userSchema = new Schema<UserType>({
     type: String,
     required: true,
   },
+  googleId: {
+    type: String,
+    required: false,
+  },
   id: {
     type: String,
     required: true,
